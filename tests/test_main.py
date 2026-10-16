@@ -2,7 +2,7 @@
 File: test_main.py
 
 Purpose:
-Verify that the ScamShield KE API starts correctly and
+Verify that the ScamShield API starts correctly and
 returns the expected responses from its basic endpoints.
 """
 
