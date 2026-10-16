@@ -19,7 +19,7 @@ def test_root_endpoint():
 
     assert response.status_code == 200
     assert response.json()["name"] == "ScamShield API"
-    assert response.json()["version"] == "0.1.0"
+    assert response.json()["version"] == "0.2.0"
 
 
 def test_health_endpoint():
