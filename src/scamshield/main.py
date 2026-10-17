@@ -3,21 +3,30 @@
 File: main.py
 
 Purpose:
-Create the ScamShield FastAPI application.
+Configure the ScamShield KE FastAPI application.
 
-Endpoints:
-- GET /: Basic API information.
-- GET /health: Health check.
-- POST /predict: Original ML prediction endpoint.
-- POST /analyze: Explainable message analysis with risk indicators.
+Provides health checks, machine-learning predictions, explainable
+message analysis, and persistent analysis-history endpoints.
 """
 
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from sqlalchemy.orm import Session
 
+from scamshield.db.database import get_db
+from scamshield.repositories.analysis import (
+    delete_analysis,
+    get_analysis_by_id,
+    list_analyses,
+    save_analysis,
+)
 from scamshield.schemas.analysis import AnalysisResponse
+from scamshield.schemas.history import (
+    AnalysisHistoryItem,
+    AnalysisHistoryResponse,
+)
 from scamshield.schemas.prediction import (
     PredictionRequest,
     PredictionResponse,
@@ -31,53 +40,49 @@ from scamshield.services.prediction import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load the model once when the API starts and release it at shutdown."""
+    """Load the prediction model once when the application starts."""
     app.state.prediction_model = load_prediction_model()
     yield
-    app.state.prediction_model = None
 
 
 app = FastAPI(
     title="ScamShield API",
     description=(
-        "API for screening potentially suspicious messages using "
-        "machine learning and explainable detection rules."
+        "Screen suspicious messages using machine learning and "
+        "explainable rules, with persistent analysis history."
     ),
-    version="0.2.0",
+    version="0.3.0",
     lifespan=lifespan,
 )
 
 
-@app.get("/", tags=["General"])
-def read_root() -> dict[str, str]:
-    """Return basic information about the API."""
+@app.get("/")
+def root() -> dict[str, str]:
+    """Describe the API."""
     return {
         "name": "ScamShield API",
-        "version": "0.2.0",
-        "message": "Welcome to the ScamShield API.",
+        "version": "0.3.0",
+        "message": "Welcome to the ScamShield KE API.",
     }
 
 
-@app.get("/health", tags=["Health"])
-def health_check() -> dict[str, str]:
-    """Report that the API process is responding."""
+@app.get("/health")
+def health() -> dict[str, str]:
+    """Report application process health."""
     return {"status": "ok"}
 
 
-@app.post(
-    "/predict",
-    response_model=PredictionResponse,
-    tags=["Prediction"],
-)
-def screen_message(
+@app.post("/predict", response_model=PredictionResponse)
+def predict(
     payload: PredictionRequest,
     request: Request,
-) -> dict[str, Any]:
-    """Run the original ML-only prediction workflow."""
-    model = request.app.state.prediction_model
-
+) -> dict:
+    """Return a machine-learning prediction without saving history."""
     try:
-        return predict_message(model, payload.message)
+        return predict_message(
+            request.app.state.prediction_model,
+            payload.message,
+        )
     except ValueError as exc:
         raise HTTPException(
             status_code=422,
@@ -85,22 +90,89 @@ def screen_message(
         ) from exc
 
 
-@app.post(
-    "/analyze",
-    response_model=AnalysisResponse,
-    tags=["Analysis"],
-)
-def analyze_submitted_message(
+@app.post("/analyze", response_model=AnalysisResponse)
+def analyze(
     payload: PredictionRequest,
     request: Request,
-) -> dict[str, Any]:
-    """Return an explainable assessment of a submitted message."""
-    model = request.app.state.prediction_model
-
+    db: Session = Depends(get_db),
+) -> dict:
+    """Analyze a message, save its result, and return the assessment."""
     try:
-        return analyze_message(model, payload.message)
+        result = analyze_message(
+            request.app.state.prediction_model,
+            payload.message,
+        )
+
+        # Persist only after analysis has completed successfully.
+        save_analysis(
+            db=db,
+            message=payload.message.strip(),
+            result=result,
+        )
+
+        return result
+
     except ValueError as exc:
         raise HTTPException(
             status_code=422,
             detail=str(exc),
         ) from exc
+
+
+@app.get("/history", response_model=AnalysisHistoryResponse)
+def get_history(
+    db: Session = Depends(get_db),
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    risk_level: Literal["low", "medium", "high"] | None = None,
+) -> dict:
+    """List saved analyses, with pagination and optional risk filtering."""
+    records = list_analyses(
+        db=db,
+        limit=limit,
+        offset=offset,
+        risk_level=risk_level,
+    )
+
+    return {
+        "items": records,
+        "limit": limit,
+        "offset": offset,
+    }
+
+
+@app.get(
+    "/history/{analysis_id}",
+    response_model=AnalysisHistoryItem,
+)
+def get_history_item(
+    analysis_id: int,
+    db: Session = Depends(get_db),
+) -> AnalysisHistoryItem:
+    """Return one saved analysis by its ID."""
+    record = get_analysis_by_id(db, analysis_id)
+
+    if record is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Analysis record not found.",
+        )
+
+    return AnalysisHistoryItem.model_validate(record)
+
+
+@app.delete("/history/{analysis_id}")
+def remove_history_item(
+    analysis_id: int,
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    """Delete one saved analysis."""
+    deleted = delete_analysis(db, analysis_id)
+
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail="Analysis record not found.",
+        )
+
+    return {"message": "Analysis record deleted."}
