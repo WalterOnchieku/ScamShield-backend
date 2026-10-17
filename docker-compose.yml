@@ -1,0 +1,29 @@
+
+# File: docker-compose.yml
+# Purpose: Run an isolated PostgreSQL database for ScamShield KE.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: scamshield-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: scamshield
+      POSTGRES_USER: scamshield
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-scamshield_dev_password}
+
+    ports:
+      - "127.0.0.1:5433:5432"
+
+    volumes:
+      - scamshield_postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scamshield -d scamshield"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  scamshield_postgres_data:

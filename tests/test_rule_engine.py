@@ -122,3 +122,76 @@ def test_rejects_empty_or_whitespace_messages(message):
     """Empty messages should raise a clear validation error."""
     with pytest.raises(ValueError, match="must not be empty"):
         analyze_message_rules(message)
+
+
+@pytest.mark.parametrize(
+    ("message", "expected_match"),
+    [
+        (
+            "Send your M-Pesa PIN to claim your reward.",
+            "Send your M-Pesa PIN",
+        ),
+        (
+            "Please share your one-time password.",
+            "share your one-time password",
+        ),
+    ],
+)
+def test_detects_sensitive_credential_requests(message, expected_match):
+    """Credential rules should detect common PIN and OTP wording."""
+    findings = analyze_message_rules(message)
+
+    credential_findings = [
+        finding
+        for finding in findings
+        if finding["rule_id"] == "credential_request"
+    ]
+
+    assert len(credential_findings) == 1
+    assert credential_findings[0]["severity"] == "high"
+    assert credential_findings[0]["matched_text"].lower() == (
+        expected_match.lower()
+    )
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "Pay KSh 500 processing fee to 0712345678 to claim your prize.",
+        "Send KES 1,000 registration fee to 0712345678.",
+    ],
+)
+def test_detects_advance_fee_with_amount_and_recipient(message):
+    """Advance-fee rules should allow amounts and recipient phone numbers."""
+    findings = analyze_message_rules(message)
+
+    fee_findings = [
+        finding
+        for finding in findings
+        if finding["rule_id"] == "advance_fee_request"
+    ]
+
+    assert len(fee_findings) == 1
+    assert fee_findings[0]["severity"] == "high"
+
+
+def test_detects_ordinary_http_url():
+    """Unencrypted HTTP links should trigger a caution finding."""
+    findings = analyze_message_rules(
+        "Claim your reward at http://claim-reward.example.com now."
+    )
+
+    rule_ids = {finding["rule_id"] for finding in findings}
+
+    assert "suspicious_url_pattern" in rule_ids
+
+
+def test_http_rule_does_not_flag_ordinary_https_domain_alone():
+    """An ordinary HTTPS domain should not match the HTTP-specific rule."""
+    findings = analyze_message_rules(
+        "Visit https://example.com to read our public information page."
+    )
+
+    rule_ids = {finding["rule_id"] for finding in findings}
+
+    assert "suspicious_url_pattern" not in rule_ids

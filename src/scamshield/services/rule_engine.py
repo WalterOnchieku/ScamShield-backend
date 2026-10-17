@@ -51,9 +51,11 @@ RULES: tuple[dict[str, Any], ...] = (
         "category": "credential_request",
         "severity": "high",
         "pattern": (
-            r"\b(?:confirm|verify|update|provide|submit|enter|share)"
-            r"\s+(?:your\s+)?(?:password|pin|passcode|"
-            r"login details|bank details|one[- ]time password|otp)\b"
+            r"\b(?:confirm|verify|update|provide|submit|enter|share|send)"
+            r"\s+(?:me\s+|us\s+)?(?:your\s+)?"
+            r"(?:[\w-]+\s+){0,2}"
+            r"(?:password|pin|passcode|login details|bank details|"
+            r"one[- ]time password|otp)\b"
         ),
         "explanation": (
             "The message appears to request sensitive authentication "
@@ -64,13 +66,18 @@ RULES: tuple[dict[str, Any], ...] = (
         "rule_id": "advance_fee_request",
         "category": "payment_request",
         "severity": "high",
+
         "pattern": (
-            r"\b(?:pay|send|deposit|transfer)\s+(?:a\s+)?"
-            r"(?:processing|registration|activation|release|"
+            r"\b(?:pay|send|deposit|transfer)\s+"
+            r"(?:(?:ksh|kes|kshs|kes\.|kes)\s*)?"
+            r"(?:\d[\d,]*(?:\.\d{1,2})?\s+)?"
+            r"(?:to\s+\+?\d[\d\s-]{6,}\s+)?"
+            r"(?:a\s+)?(?:processing|registration|activation|release|"
             r"delivery|clearance)\s+(?:fee|charge|payment)\b"
             r"|\bpay\s+(?:to\s+)?(?:claim|release|unlock)\s+"
             r"(?:your\s+)?(?:prize|reward|funds|package)\b"
         ),
+
         "explanation": (
             "The message links a payment to releasing a prize, benefit, "
             "or service. Verify the request through an official channel."
@@ -80,16 +87,19 @@ RULES: tuple[dict[str, Any], ...] = (
         "rule_id": "suspicious_url_pattern",
         "category": "suspicious_link",
         "severity": "medium",
+
         "pattern": (
             r"\bhttps?://(?:"
             r"bit\.ly|tinyurl\.com|t\.co|is\.gd|cutt\.ly|"
             r"rb\.gy|shorturl\.at|ow\.ly"
             r")(?:[/:\s?#]|$)"
             r"|https?://(?:\d{1,3}\.){3}\d{1,3}(?=[:/]\S|$)"
+            r"|http://[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:[/?:#][^\s]*)?"
         ),
+
         "explanation": (
-            "The message contains a known URL-shortening domain or a "
-            "URL using an IP address. Inspect the destination carefully."
+            "The message contains a URL pattern that warrants careful inspection. "
+            "Verify the destination independently before opening the link."
         ),
     },
     {
