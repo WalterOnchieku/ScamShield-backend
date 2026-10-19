@@ -1,36 +1,51 @@
-
 """
 File: database.py
 
 Purpose:
 Configure SQLAlchemy for the ScamShield KE PostgreSQL database.
-
-The engine manages database connectivity, SessionLocal creates
-individual database sessions, and Base is the parent class for
-SQLAlchemy database models.
 """
 
 import os
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-# Use an environment variable when configured; otherwise, use the
-# local development database defined in docker-compose.yml.
+# Get DATABASE_URL from environment or fall back to local dev
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+psycopg://scamshield:scamshield_dev_password"
-    "@localhost:5433/scamshield",
+    "postgresql+psycopg://scamshield:scamshield_dev_password@localhost:5433/scamshield",
 )
 
-# pool_pre_ping checks stale connections before they are reused.
-engine = create_engine(
-    DATABASE_URL,
+# Ensure async URL for asyncpg if running FastAPI app
+async_database_url = DATABASE_URL
+if async_database_url.startswith("postgresql://"):
+    async_database_url = async_database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+# Async engine for FastAPI app runtime
+async_engine = create_async_engine(
+    async_database_url,
     pool_pre_ping=True,
 )
 
-# Each request or operation can obtain its own database session.
+AsyncSessionLocal = async_sessionmaker(
+    bind=async_engine,
+    class_=AsyncSession,
+    autoflush=False,
+    expire_on_commit=False,
+)
+
+# Sync engine / session for migrations or fallback tasks if needed
+sync_database_url = DATABASE_URL
+if sync_database_url.startswith("postgresql+asyncpg://"):
+    sync_database_url = sync_database_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+
+engine = create_engine(
+    sync_database_url,
+    pool_pre_ping=True,
+)
+
 SessionLocal = sessionmaker(
     bind=engine,
     autoflush=False,
@@ -42,16 +57,9 @@ class Base(DeclarativeBase):
     """Base class inherited by all SQLAlchemy ORM models."""
 
 
-def get_db() -> Generator[Session, None, None]:
+async def get_db() -> AsyncGenerator[AsyncSession, None, None]:
     """
-    Yield a database session and close it when the caller finishes.
-
-    FastAPI will use this function as a dependency when we integrate
-    database persistence into the endpoints.
+    Yield an async database session for FastAPI dependencies.
     """
-    db = SessionLocal()
-
-    try:
-        yield db
-    finally:
-        db.close()
+    async with AsyncSessionLocal() as session:
+        yield session
