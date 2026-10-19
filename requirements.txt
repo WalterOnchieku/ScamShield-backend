@@ -2,10 +2,12 @@ alembic==1.20.0
 annotated-doc==0.0.5
 annotated-types==0.8.0
 anyio==4.15.1
+asyncpg==0.32.0
 certifi==2026.7.22
 click==8.5.0
 cloudpickle==3.1.2
 fastapi==0.143.2
+greenlet==3.5.6
 h11==0.16.0
 httpcore==1.0.9
 httptools==0.9.0
@@ -30,7 +32,7 @@ pytest==9.1.1
 python-dotenv==1.2.4
 PyYAML==6.0.3
 ruff==0.17.1
--e git+https://github.com/WalterOnchieku/ScamShield-backend.git@f290972e286f094d88077dd9e674f40cb0225f1a#egg=scamshield_ke_api
+-e git+https://github.com/WalterOnchieku/ScamShield-backend.git@1a75dd55a027f7fcd302ce8604ac5f1f4c3ca921#egg=scamshield_ke_api
 scikit-learn==1.9.1
 scipy==1.18.1
 SQLAlchemy==2.1.4
