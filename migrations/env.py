@@ -12,8 +12,8 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-from src.scamshield.db.database import Base, DATABASE_URL
-from src.scamshield.db import models  # noqa: F401
+from scamshield.db.database import Base, DATABASE_URL
+from scamshield.db import models  # noqa: F401
 
 # Force the URL to use psycopg2 (or plain postgresql://) for migrations
 sync_url = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
