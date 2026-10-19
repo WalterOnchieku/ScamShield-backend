@@ -32,7 +32,6 @@ pytest==9.1.1
 python-dotenv==1.2.4
 PyYAML==6.0.3
 ruff==0.17.1
--e git+https://github.com/WalterOnchieku/ScamShield-backend.git@1a75dd55a027f7fcd302ce8604ac5f1f4c3ca921#egg=scamshield_ke_api
 scikit-learn==1.9.1
 scipy==1.18.1
 SQLAlchemy==2.1.4
