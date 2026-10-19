@@ -1,5 +1,5 @@
 # File: docker-compose.yml
-# Purpose: Run an isolated PostgreSQL database and FastAPI backend for ScamShield KE.
+# Purpose: Run an isolated PostgreSQL database and FastAPI backend for ScamShield.
 
 services:
   db:
