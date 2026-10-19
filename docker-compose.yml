@@ -1,6 +1,5 @@
-
 # File: docker-compose.yml
-# Purpose: Run an isolated PostgreSQL database for ScamShield KE.
+# Purpose: Run an isolated PostgreSQL database and FastAPI backend for ScamShield KE.
 
 services:
   db:
@@ -24,6 +23,21 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  api:
+    build: .
+    container_name: scamshield-api
+    restart: unless-stopped
+    command: uvicorn scamshield.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://scamshield:${POSTGRES_PASSWORD:-scamshield_dev_password}@db:5432/scamshield
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   scamshield_postgres_data:

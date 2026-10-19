@@ -37,6 +37,8 @@ from scamshield.services.prediction import (
     predict_message,
 )
 
+from fastapi.middleware.cors import CORSMiddleware
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -55,6 +57,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def root() -> dict[str, str]:
@@ -62,7 +74,7 @@ def root() -> dict[str, str]:
     return {
         "name": "ScamShield API",
         "version": "0.3.0",
-        "message": "Welcome to the ScamShield KE API.",
+        "message": "Welcome to the ScamShield API.",
     }
 
 
