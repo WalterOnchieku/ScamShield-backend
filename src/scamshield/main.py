@@ -105,10 +105,10 @@ def predict(
 
 
 @app.post("/analyze", response_model=AnalysisResponse)
-def analyze(
+async def analyze(
     payload: PredictionRequest,
     request: Request,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Analyze a message, save its result, and return the assessment."""
     try:
@@ -118,7 +118,7 @@ def analyze(
         )
 
         # Persist only after analysis has completed successfully.
-        save_analysis(
+        await save_analysis(
             db=db,
             message=payload.message.strip(),
             result=result,
