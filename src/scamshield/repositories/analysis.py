@@ -1,4 +1,3 @@
-
 """
 File: analysis.py
 
@@ -12,13 +11,13 @@ run the machine-learning model or decide whether a message is risky.
 from typing import Any
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from scamshield.db.models import AnalysisRecord
 
 
-def save_analysis(
-    db: Session,
+async def save_analysis(
+    db: AsyncSession,
     message: str,
     result: dict[str, Any],
 ) -> AnalysisRecord:
@@ -35,14 +34,14 @@ def save_analysis(
     )
 
     db.add(record)
-    db.commit()
-    db.refresh(record)
+    await db.commit()
+    await db.refresh(record)
 
     return record
 
 
-def get_analysis_by_id(
-    db: Session,
+async def get_analysis_by_id(
+    db: AsyncSession,
     analysis_id: int,
 ) -> AnalysisRecord | None:
     """Retrieve one saved analysis by its ID."""
@@ -50,11 +49,12 @@ def get_analysis_by_id(
         AnalysisRecord.id == analysis_id
     )
 
-    return db.scalar(statement)
+    # Await the async scalar execution
+    return await db.scalar(statement)
 
 
 async def list_analyses(
-    db: Session,
+    db: AsyncSession,
     limit: int = 20,
     offset: int = 0,
     risk_level: str | None = None,
@@ -79,17 +79,18 @@ async def list_analyses(
     return list(result.all())
 
 
-def delete_analysis(
-    db: Session,
+async def delete_analysis(
+    db: AsyncSession,
     analysis_id: int,
 ) -> bool:
     """Delete one analysis; return False when its ID does not exist."""
-    record = get_analysis_by_id(db, analysis_id)
+    # Await the async get_analysis_by_id function
+    record = await get_analysis_by_id(db, analysis_id)
 
     if record is None:
         return False
 
-    db.delete(record)
-    db.commit()
+    await db.delete(record)
+    await db.commit()
 
     return True
