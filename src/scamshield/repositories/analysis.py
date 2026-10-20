@@ -53,7 +53,7 @@ def get_analysis_by_id(
     return db.scalar(statement)
 
 
-def list_analyses(
+async def list_analyses(
     db: Session,
     limit: int = 20,
     offset: int = 0,
@@ -74,7 +74,9 @@ def list_analyses(
         .limit(limit)
     )
 
-    return list(db.scalars(statement).all())
+    # Await the async scalars execution
+    result = await db.scalars(statement)
+    return list(result.all())
 
 
 def delete_analysis(
