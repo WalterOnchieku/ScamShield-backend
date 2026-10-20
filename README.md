@@ -27,7 +27,8 @@ ScamShield KE is organized into independent repositories:
 
 The frontend provides the user interface, while the ML repository contains the dataset preparation, model training, and evaluation workflow.
 
-**Live application:** *Frontend deployment link to be added.*
+**Live application:** *[ScamShield KE.](https://scamshield-frontend-ecru.vercel.app/)*
+**Loom Video Demo:** *[SMS Classifier Using TF IDF and Logistic Regression.](https://www.loom.com/share/516177e64f0646cfb5f7c77082453024)*
 
 ---
 
