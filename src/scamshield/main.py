@@ -38,6 +38,7 @@ from scamshield.services.prediction import (
 )
 
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @asynccontextmanager
@@ -133,14 +134,15 @@ def analyze(
 
 
 @app.get("/history", response_model=AnalysisHistoryResponse)
-def get_history(
-    db: Session = Depends(get_db),
+async def get_history(
+    db: AsyncSession = Depends(get_db),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     risk_level: Literal["low", "medium", "high"] | None = None,
 ) -> dict:
     """List saved analyses, with pagination and optional risk filtering."""
-    records = list_analyses(
+    # Await the async repository function
+    records = await list_analyses(
         db=db,
         limit=limit,
         offset=offset,
@@ -158,12 +160,13 @@ def get_history(
     "/history/{analysis_id}",
     response_model=AnalysisHistoryItem,
 )
-def get_history_item(
+async def get_history_item(
     analysis_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> AnalysisHistoryItem:
     """Return one saved analysis by its ID."""
-    record = get_analysis_by_id(db, analysis_id)
+    # Await the async repository function (e.g., using await db.get() inside)
+    record = await get_analysis_by_id(db, analysis_id)
 
     if record is None:
         raise HTTPException(
@@ -175,12 +178,13 @@ def get_history_item(
 
 
 @app.delete("/history/{analysis_id}")
-def remove_history_item(
+async def remove_history_item(
     analysis_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
     """Delete one saved analysis."""
-    deleted = delete_analysis(db, analysis_id)
+    # Await the async repository function
+    deleted = await delete_analysis(db, analysis_id)
 
     if not deleted:
         raise HTTPException(
